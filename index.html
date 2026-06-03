@@ -329,46 +329,58 @@ async function generateAiImage() {
   // Ajouter aussi le nom complet en anglais si possible
   searchTerms.push(nom);
 
+  // Collecter TOUTES les photos pour tourner à chaque clic
+  let allImgs = [];
+
   for (const term of searchTerms) {
     try {
       const res = await fetch(`https://www.themealdb.com/api/json/v1/1/search.php?s=${encodeURIComponent(term)}`);
       const data = await res.json();
-      if (data.meals && data.meals[0] && data.meals[0].strMealThumb) {
-        imgUrl = data.meals[0].strMealThumb;
-        break;
-      }
+      if (data.meals) data.meals.forEach(m => { if (m.strMealThumb) allImgs.push(m.strMealThumb); });
     } catch(e) {}
   }
 
-  // Si toujours rien, chercher par catégorie détectée
-  if (!imgUrl) {
-    const categoryMap = {
-      'chicken': 'Chicken', 'beef': 'Beef', 'lamb': 'Lamb', 'pasta': 'Pasta',
-      'seafood': 'Seafood', 'dessert': 'Dessert', 'vegetarian': 'Vegetarian',
-    };
-    const detectedCat = searchTerms.find(t => categoryMap[t.toLowerCase()]);
-    if (detectedCat) {
-      try {
-        const res = await fetch(`https://www.themealdb.com/api/json/v1/1/filter.php?c=${categoryMap[detectedCat.toLowerCase()]}`);
-        const data = await res.json();
-        if (data.meals && data.meals[0]) imgUrl = data.meals[0].strMealThumb;
-      } catch(e) {}
-    }
+  // Chercher aussi par catégorie pour plus de choix
+  const categoryMap = {
+    'chicken': 'Chicken', 'beef': 'Beef', 'lamb': 'Lamb', 'pasta': 'Pasta',
+    'seafood': 'Seafood', 'dessert': 'Dessert', 'vegetarian': 'Vegetarian',
+  };
+  const detectedCat = searchTerms.find(t => categoryMap[t.toLowerCase()]);
+  if (detectedCat) {
+    try {
+      const res = await fetch(`https://www.themealdb.com/api/json/v1/1/filter.php?c=${categoryMap[detectedCat.toLowerCase()]}`);
+      const data = await res.json();
+      if (data.meals) data.meals.slice(0, 20).forEach(m => { if (m.strMealThumb) allImgs.push(m.strMealThumb); });
+    } catch(e) {}
   }
 
-  // Fallback photos Pexels fixes si TheMealDB n'a rien
-  if (!imgUrl) {
+  // Dédupliquer
+  allImgs = [...new Set(allImgs)];
+
+  if (allImgs.length > 0) {
+    // Tourner à chaque clic grâce à un index stocké sur le bouton
+    const prevIdx = parseInt(btn.dataset.imgIdx || '-1');
+    const nextIdx = (prevIdx + 1) % allImgs.length;
+    btn.dataset.imgIdx = nextIdx;
+    imgUrl = allImgs[nextIdx];
+    const total = allImgs.length;
+    setStatus(`✨ Photo ${nextIdx + 1}/${total}${total > 1 ? ' — reclique pour en voir une autre' : ''}`, 'ok');
+  } else {
+    // Fallback Pexels si TheMealDB n'a rien
     const fallbacks = [
       'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?w=400&h=300&fit=crop',
       'https://images.pexels.com/photos/1099680/pexels-photo-1099680.jpeg?w=400&h=300&fit=crop',
       'https://images.pexels.com/photos/2097090/pexels-photo-2097090.jpeg?w=400&h=300&fit=crop',
       'https://images.pexels.com/photos/376464/pexels-photo-376464.jpeg?w=400&h=300&fit=crop',
     ];
-    const seed = nom.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
-    imgUrl = fallbacks[seed % fallbacks.length];
+    const prevIdx = parseInt(btn.dataset.imgIdx || '-1');
+    const nextIdx = (prevIdx + 1) % fallbacks.length;
+    btn.dataset.imgIdx = nextIdx;
+    imgUrl = fallbacks[nextIdx];
+    setStatus(`✨ Photo ${nextIdx + 1}/${fallbacks.length} — reclique pour en voir une autre`, 'ok');
   }
 
-  setPreviewImage(imgUrl, '✨ Photo trouvée !', true);
+  setPreviewImage(imgUrl, null, true);
   btn.disabled = false;
   btn.textContent = '✨ Générer avec IA';
 }
