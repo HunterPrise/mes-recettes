@@ -300,33 +300,57 @@ async function generateAiImage() {
   btn.textContent = '⏳ Recherche…';
   setStatus('Recherche d\'une image pour ce plat…', 'loading');
 
-  // Nettoyer le nom pour la recherche : enlever les mots génériques
-  const stopwords = ['aux', 'au', 'de', 'du', 'des', 'le', 'la', 'les', 'en', 'et', 'à', 'avec', 'sans', 'sur'];
+  // Mots clés nettoyés
+  const stopwords = ['aux', 'au', 'de', 'du', 'des', 'le', 'la', 'les', 'en', 'et', 'à', 'avec', 'sans', 'sur', 'une', 'un'];
   const keywords = nom.toLowerCase().split(' ')
     .filter(w => w.length > 2 && !stopwords.includes(w))
-    .slice(0, 3)
-    .join(',');
+    .slice(0, 3).join(' ');
 
-  // Unsplash avec seed basé sur le nom pour avoir toujours la même image
-  const seed = nom.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
-  const query = encodeURIComponent(keywords + ',food');
-  const imgUrl = `https://source.unsplash.com/400x300/?${query}&sig=${seed}`;
+  // Utiliser Pexels via leur CDN public (pas besoin de clé pour les recherches basiques)
+  // Fallback sur une image fixe Pexels selon catégorie détectée
+  const categories = {
+    'poulet': 'https://images.pexels.com/photos/2338407/pexels-photo-2338407.jpeg?w=400&h=300&fit=crop',
+    'boeuf': 'https://images.pexels.com/photos/1639557/pexels-photo-1639557.jpeg?w=400&h=300&fit=crop',
+    'poisson': 'https://images.pexels.com/photos/3655916/pexels-photo-3655916.jpeg?w=400&h=300&fit=crop',
+    'saumon': 'https://images.pexels.com/photos/3655916/pexels-photo-3655916.jpeg?w=400&h=300&fit=crop',
+    'pâtes': 'https://images.pexels.com/photos/1279330/pexels-photo-1279330.jpeg?w=400&h=300&fit=crop',
+    'pasta': 'https://images.pexels.com/photos/1279330/pexels-photo-1279330.jpeg?w=400&h=300&fit=crop',
+    'pizza': 'https://images.pexels.com/photos/825661/pexels-photo-825661.jpeg?w=400&h=300&fit=crop',
+    'salade': 'https://images.pexels.com/photos/1211887/pexels-photo-1211887.jpeg?w=400&h=300&fit=crop',
+    'taboulé': 'https://images.pexels.com/photos/1211887/pexels-photo-1211887.jpeg?w=400&h=300&fit=crop',
+    'soupe': 'https://images.pexels.com/photos/1547313/pexels-photo-1547313.jpeg?w=400&h=300&fit=crop',
+    'gâteau': 'https://images.pexels.com/photos/291528/pexels-photo-291528.jpeg?w=400&h=300&fit=crop',
+    'cake': 'https://images.pexels.com/photos/291528/pexels-photo-291528.jpeg?w=400&h=300&fit=crop',
+    'riz': 'https://images.pexels.com/photos/723198/pexels-photo-723198.jpeg?w=400&h=300&fit=crop',
+    'curry': 'https://images.pexels.com/photos/2474661/pexels-photo-2474661.jpeg?w=400&h=300&fit=crop',
+    'burger': 'https://images.pexels.com/photos/1639557/pexels-photo-1639557.jpeg?w=400&h=300&fit=crop',
+    'tarte': 'https://images.pexels.com/photos/291528/pexels-photo-291528.jpeg?w=400&h=300&fit=crop',
+    'omelette': 'https://images.pexels.com/photos/704569/pexels-photo-704569.jpeg?w=400&h=300&fit=crop',
+    'oeuf': 'https://images.pexels.com/photos/704569/pexels-photo-704569.jpeg?w=400&h=300&fit=crop',
+  };
 
-  // Tester que l'image charge bien
-  const testImg = new Image();
-  testImg.onload = () => {
-    setPreviewImage(imgUrl, '✨ Image trouvée automatiquement !', true);
-    btn.disabled = false;
-    btn.textContent = '✨ Générer avec IA';
-  };
-  testImg.onerror = () => {
-    // Fallback générique nourriture
-    const fallback = `https://source.unsplash.com/400x300/?food,cooking,recipe&sig=${seed}`;
-    setPreviewImage(fallback, '✨ Image générée automatiquement', true);
-    btn.disabled = false;
-    btn.textContent = '✨ Générer avec IA';
-  };
-  testImg.src = imgUrl;
+  const nomLower = nom.toLowerCase();
+  let imgUrl = null;
+  for (const [key, url] of Object.entries(categories)) {
+    if (nomLower.includes(key)) { imgUrl = url; break; }
+  }
+
+  // Fallback générique si aucune catégorie trouvée
+  const generics = [
+    'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?w=400&h=300&fit=crop',
+    'https://images.pexels.com/photos/1099680/pexels-photo-1099680.jpeg?w=400&h=300&fit=crop',
+    'https://images.pexels.com/photos/2097090/pexels-photo-2097090.jpeg?w=400&h=300&fit=crop',
+    'https://images.pexels.com/photos/376464/pexels-photo-376464.jpeg?w=400&h=300&fit=crop',
+    'https://images.pexels.com/photos/1640774/pexels-photo-1640774.jpeg?w=400&h=300&fit=crop',
+  ];
+  if (!imgUrl) {
+    const seed = nom.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+    imgUrl = generics[seed % generics.length];
+  }
+
+  setPreviewImage(imgUrl, '✨ Image trouvée automatiquement !', true);
+  btn.disabled = false;
+  btn.textContent = '✨ Générer avec IA';
 }
 
 function setPreviewImage(url, statusMsg, isAi = false) {
