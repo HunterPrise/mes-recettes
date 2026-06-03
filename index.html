@@ -290,7 +290,7 @@ function tryYoutubThumb() {
 async function generateAiImage() {
   const nom = document.getElementById('f-name').value.trim();
   if (!nom) {
-    setStatus('Remplis d\'abord le nom de la recette', 'err');
+    setStatus("Remplis d'abord le nom de la recette", 'err');
     document.getElementById('f-name').focus();
     return;
   }
@@ -298,89 +298,51 @@ async function generateAiImage() {
   const btn = document.getElementById('btn-ai-thumb');
   btn.disabled = true;
   btn.textContent = '⏳ Recherche…';
-  setStatus('Recherche d\'une photo du plat…', 'loading');
+  setStatus('Recherche une photo du plat...', 'loading');
 
-  // Mots clés : on enlève les mots français courants et on garde l'essentiel
-  const stopwords = ['aux', 'au', 'de', 'du', 'des', 'le', 'la', 'les', 'en', 'et', 'à', 'avec', 'sans', 'sur', 'une', 'un', 'ma', 'mon', 'mes', 'revisité', 'maison', 'facile', 'rapide'];
+  const UNSPLASH_KEY = 'RpkzrE25JZz5UNE5weyXk05G72F6uLtPXrQlLDGptPY';
+
+  const stopwords = ['aux', 'au', 'de', 'du', 'des', 'le', 'la', 'les', 'en', 'et', 'a', 'avec', 'sans', 'sur', 'une', 'un', 'ma', 'mon', 'mes', 'revisité', 'maison', 'facile', 'rapide'];
   const words = nom.toLowerCase().split(/\s+/).filter(w => w.length > 2 && !stopwords.includes(w));
 
-  // Traductions FR→EN pour TheMealDB
   const translations = {
-    'poulet': 'chicken', 'boeuf': 'beef', 'bœuf': 'beef', 'agneau': 'lamb',
-    'porc': 'pork', 'saumon': 'salmon', 'thon': 'tuna', 'crevettes': 'shrimp',
+    'poulet': 'chicken', 'boeuf': 'beef', 'agneau': 'lamb', 'porc': 'pork',
+    'saumon': 'salmon', 'thon': 'tuna', 'crevettes': 'shrimp', 'volaille': 'chicken',
     'pâtes': 'pasta', 'riz': 'rice', 'pizza': 'pizza', 'burger': 'burger',
-    'salade': 'salad', 'soupe': 'soup', 'curry': 'curry', 'tajine': 'tajine',
+    'salade': 'salad', 'soupe': 'soup', 'curry': 'curry', 'tajine': 'tagine',
     'taboulé': 'tabbouleh', 'couscous': 'couscous', 'quiche': 'quiche',
     'omelette': 'omelette', 'crêpes': 'crepes', 'gâteau': 'cake',
-    'tarte': 'pie', 'tiramisu': 'tiramisu', 'mousse': 'mousse',
-    'lasagne': 'lasagna', 'risotto': 'risotto', 'paella': 'paella',
-    'ratatouille': 'ratatouille', 'gratin': 'gratin', 'steak': 'steak',
-    'sushi': 'sushi', 'wok': 'stir fry', 'dame': 'salmon',
+    'tarte': 'pie', 'tiramisu': 'tiramisu', 'lasagne': 'lasagna',
+    'risotto': 'risotto', 'paella': 'paella', 'steak': 'steak',
+    'filet': 'fillet', 'crème': 'cream', 'grillé': 'grilled', 'rôti': 'roasted',
   };
 
-  // Chercher d'abord avec traduction, ensuite mot par mot
-  let imgUrl = null;
-  const searchTerms = [];
+  const translated = words.map(w => translations[w] || w);
+  const query = encodeURIComponent(translated.join(' ') + ' food dish');
 
-  for (const word of words) {
-    if (translations[word]) searchTerms.unshift(translations[word]);
-    else searchTerms.push(word);
-  }
-  // Ajouter aussi le nom complet en anglais si possible
-  searchTerms.push(nom);
+  const prevIdx = parseInt(btn.dataset.imgIdx || '-1');
+  const nextIdx = prevIdx + 1;
+  const page = Math.floor(nextIdx / 10) + 1;
 
-  // Collecter TOUTES les photos pour tourner à chaque clic
-  let allImgs = [];
+  try {
+    const res = await fetch(
+      `https://api.unsplash.com/search/photos?query=${query}&per_page=10&page=${page}&orientation=landscape&client_id=${UNSPLASH_KEY}`
+    );
+    const data = await res.json();
 
-  for (const term of searchTerms) {
-    try {
-      const res = await fetch(`https://www.themealdb.com/api/json/v1/1/search.php?s=${encodeURIComponent(term)}`);
-      const data = await res.json();
-      if (data.meals) data.meals.forEach(m => { if (m.strMealThumb) allImgs.push(m.strMealThumb); });
-    } catch(e) {}
-  }
-
-  // Chercher aussi par catégorie pour plus de choix
-  const categoryMap = {
-    'chicken': 'Chicken', 'beef': 'Beef', 'lamb': 'Lamb', 'pasta': 'Pasta',
-    'seafood': 'Seafood', 'dessert': 'Dessert', 'vegetarian': 'Vegetarian',
-  };
-  const detectedCat = searchTerms.find(t => categoryMap[t.toLowerCase()]);
-  if (detectedCat) {
-    try {
-      const res = await fetch(`https://www.themealdb.com/api/json/v1/1/filter.php?c=${categoryMap[detectedCat.toLowerCase()]}`);
-      const data = await res.json();
-      if (data.meals) data.meals.slice(0, 20).forEach(m => { if (m.strMealThumb) allImgs.push(m.strMealThumb); });
-    } catch(e) {}
+    if (data.results && data.results.length > 0) {
+      const imgs = data.results.map(r => r.urls.regular);
+      const idx = nextIdx % imgs.length;
+      btn.dataset.imgIdx = nextIdx;
+      setStatus(`✨ Photo ${nextIdx + 1} — reclique pour en voir une autre`, 'ok');
+      setPreviewImage(imgs[idx], null, true);
+    } else {
+      setStatus('Aucune photo trouvée — essaie un autre nom', 'err');
+    }
+  } catch(e) {
+    setStatus('Erreur de recherche — vérifie ta connexion', 'err');
   }
 
-  // Dédupliquer
-  allImgs = [...new Set(allImgs)];
-
-  if (allImgs.length > 0) {
-    // Tourner à chaque clic grâce à un index stocké sur le bouton
-    const prevIdx = parseInt(btn.dataset.imgIdx || '-1');
-    const nextIdx = (prevIdx + 1) % allImgs.length;
-    btn.dataset.imgIdx = nextIdx;
-    imgUrl = allImgs[nextIdx];
-    const total = allImgs.length;
-    setStatus(`✨ Photo ${nextIdx + 1}/${total}${total > 1 ? ' — reclique pour en voir une autre' : ''}`, 'ok');
-  } else {
-    // Fallback Pexels si TheMealDB n'a rien
-    const fallbacks = [
-      'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?w=400&h=300&fit=crop',
-      'https://images.pexels.com/photos/1099680/pexels-photo-1099680.jpeg?w=400&h=300&fit=crop',
-      'https://images.pexels.com/photos/2097090/pexels-photo-2097090.jpeg?w=400&h=300&fit=crop',
-      'https://images.pexels.com/photos/376464/pexels-photo-376464.jpeg?w=400&h=300&fit=crop',
-    ];
-    const prevIdx = parseInt(btn.dataset.imgIdx || '-1');
-    const nextIdx = (prevIdx + 1) % fallbacks.length;
-    btn.dataset.imgIdx = nextIdx;
-    imgUrl = fallbacks[nextIdx];
-    setStatus(`✨ Photo ${nextIdx + 1}/${fallbacks.length} — reclique pour en voir une autre`, 'ok');
-  }
-
-  setPreviewImage(imgUrl, null, true);
   btn.disabled = false;
   btn.textContent = '✨ Générer avec IA';
 }
