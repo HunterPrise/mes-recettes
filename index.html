@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mes Recettes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #F9F7F2;
+  --surface: #FFFFFF;
+  --border: rgba(0,0,0,0.10);
+  --border-hover: rgba(0,0,0,0.22);
+  --text-primary: #1A1A18;
+  --text-secondary: #6B6860;
+  --text-muted: #A8A49D;
+  --accent: #C85E2A;
+  --accent-light: #FAF0EA;
+  --radius: 14px;
+  --radius-sm: 8px;
+  --shadow: 0 2px 12px rgba(0,0,0,0.06);
+  --shadow-hover: 0 4px 20px rgba(0,0,0,0.10);
+}
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text-primary);
+  min-height: 100vh;
+  padding-bottom: 4rem;
+}
+
+header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 1rem 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.logo {
+  font-family: 'Lora', serif;
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.logo span { color: var(--accent); }
+
+.btn-add {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 18px;
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.btn-add:hover { opacity: 0.88; }
+
+main { max-width: 960px; margin: 0 auto; padding: 2rem 1.5rem; }
+
+.toolbar {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 2rem;
+  align-items: center;
+}
+.search-wrap { position: relative; flex: 1; }
+.search-wrap input {
+  width: 100%;
+  padding: 10px 14px 10px 40px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  color: var(--text-primary);
+  outline: none;
+  transition: border-color 0.15s;
+}
+.search-wrap input:focus { border-color: var(--accent); }
+.search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.count { font-size: 13px; color: var(--text-muted); white-space: nowrap; }
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 18px;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  cursor: pointer;
+  transition: box-shadow 0.18s, border-color 0.18s, transform 0.12s;
+  box-shadow: var(--shadow);
+}
+.card:hover {
+  box-shadow: var(--shadow-hover);
+  border-color: var(--border-hover);
+  transform: translateY(-2px);
+}
+
+.card-thumb {
+  width: 100%;
+  height: 140px;
+  object-fit: cover;
+  display: block;
+}
+.card-thumb-placeholder {
+  width: 100%;
+  height: 140px;
+  background: var(--accent-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 36px;
+}
+
+.card-body { padding: 12px 14px 6px; }
+.card-title {
+  font-family: 'Lora', serif;
+  font-size: 15px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 5px;
+}
+.card-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--accent);
+  background: var(--accent-light);
+  border-radius: 4px;
+  padding: 2px 7px;
+}
+
+.card-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 4px;
+  padding: 8px 10px;
+  border-top: 1px solid var(--border);
+  margin-top: 8px;
+}
+.icon-btn {
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--text-muted);
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  transition: all 0.12s;
+}
+.icon-btn:hover { border-color: var(--border); color: var(--text-primary); background: var(--bg); }
+.icon-btn.del:hover { border-color: #e5b3b3; color: #A32D2D; background: #fff0f0; }
+
+.empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 5rem 2rem;
+  color: var(--text-muted);
+}
+.empty-icon { font-size: 56px; margin-bottom: 1rem; }
+
+/* Spinner */
+.spinner-wrap {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: center;
+  padding: 4rem;
+}
+.spinner {
+  width: 32px;
+  height: 32px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Overlay modale */
+.overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(20,18,14,0.55);
+  z-index: 50;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+.overlay.open { display: flex; }
+
+.modal {
+  background: var(--surface);
+  border-radius: var(--radius);
+  width: 100%;
+  max-width: 520px;
+  max-height: 92vh;
+  overflow-y: auto;
+  padding: 2rem;
+}
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+}
+.modal-title {
+  font-family: 'Lora', serif;
+  font-size: 20px;
+  font-weight: 600;
+}
+.modal-close {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--text-muted);
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  transition: all 0.12s;
+}
+.modal-close:hover { color: var(--text-primary); border-color: var(--border-hover); }
+
+.field { margin-bottom: 1.1rem; }
+.field label {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 6px;
+}
+.field input, .field textarea {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  color: var(--text-primary);
+  outline: none;
+  transition: border-color 0.15s;
+}
+.field input:focus, .field textarea:focus { border-color: var(--accent); }
+.field textarea { min-height: 100px; resize: vertical; line-height: 1.6; }
+
+.url-row { display: flex; gap: 8px; align-items: flex-start; }
+.url-row input { flex: 1; }
+.btn-detect {
+  padding: 9px 12px;
+  background: var(--accent-light);
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  font-family: 'DM Sans', sans-serif;
+  transition: all 0.15s;
+}
+.btn-detect:hover { background: var(--accent); color: white; }
+.btn-detect:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.detect-status {
+  font-size: 12px;
+  margin-top: 5px;
+  color: var(--text-muted);
+  min-height: 16px;
+}
+.detect-status.ok { color: #3a7d44; }
+.detect-status.err { color: #A32D2D; }
+
+.img-preview {
+  width: 100%;
+  height: 90px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  margin-top: 8px;
+  display: none;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border);
+}
+.btn-cancel {
+  padding: 9px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-secondary);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  cursor: pointer;
+}
+.btn-cancel:hover { border-color: var(--border-hover); color: var(--text-primary); }
+.btn-save {
+  padding: 9px 22px;
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.btn-save:hover { opacity: 0.88; }
+.btn-save:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Détail */
+.detail-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(20,18,14,0.55);
+  z-index: 60;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+.detail-overlay.open { display: flex; }
+.detail-modal {
+  background: var(--surface);
+  border-radius: var(--radius);
+  width: 100%;
+  max-width: 580px;
+  max-height: 92vh;
+  overflow-y: auto;
+  position: relative;
+}
+.detail-close-btn {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  background: rgba(255,255,255,0.9);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  z-index: 2;
+}
+.detail-img {
+  width: 100%;
+  height: 220px;
+  object-fit: cover;
+  border-radius: var(--radius) var(--radius) 0 0;
+  display: block;
+}
+.detail-no-img {
+  width: 100%;
+  height: 100px;
+  background: var(--accent-light);
+  border-radius: var(--radius) var(--radius) 0 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 40px;
+}
+.detail-body { padding: 1.5rem; }
+.detail-name {
+  font-family: 'Lora', serif;
+  font-size: 22px;
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+.detail-link-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 16px;
+  background: #1877F2;
+  color: white;
+  text-decoration: none;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 1.25rem;
+  transition: opacity 0.15s;
+}
+.detail-link-btn:hover { opacity: 0.88; }
+.detail-link-btn.generic { background: var(--accent); }
+.detail-desc {
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.8;
+  white-space: pre-wrap;
+}
+.detail-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 1rem 1.5rem;
+  border-top: 1px solid var(--border);
+}
+
+/* Toast */
+.toast {
+  position: fixed;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: #1A1A18;
+  color: white;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 13px;
+  opacity: 0;
+  transition: all 0.25s;
+  z-index: 999;
+  pointer-events: none;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+@media (max-width: 600px) {
+  header { padding: 0.8rem 1rem; }
+  main { padding: 1.2rem 0.8rem; }
+  .grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
+  .url-row { flex-direction: column; }
+  .btn-detect { width: 100%; justify-content: center; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">🍽 Mes <span>Recettes</span></div>
+  <button class="btn-add" onclick="openAdd()">+ Ajouter</button>
+</header>
+
+<main>
+  <div class="toolbar">
+    <div class="search-wrap">
+      <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input type="text" id="search" placeholder="Rechercher une recette…" oninput="renderGrid()">
+    </div>
+    <span class="count" id="count"></span>
+  </div>
+  <div class="grid" id="grid">
+    <div class="spinner-wrap"><div class="spinner"></div></div>
+  </div>
+</main>
+
+<!-- Modale ajout/édition -->
+<div class="overlay" id="addOverlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 class="modal-title" id="modal-title">Nouvelle recette</h2>
+      <button class="modal-close" onclick="closeAdd()">✕</button>
+    </div>
+
+    <div class="field">
+      <label>Nom de la recette *</label>
+      <input type="text" id="f-name" placeholder="Ex : Poulet rôti aux herbes">
+    </div>
+
+    <div class="field">
+      <label>Lien vidéo (Facebook, YouTube…)</label>
+      <div class="url-row">
+        <input type="text" id="f-url" placeholder="https://www.facebook.com/watch/…" oninput="onUrlInput()">
+        <button class="btn-detect" id="btn-detect" onclick="detectImage()" disabled>🔍 Image auto</button>
+      </div>
+      <div class="detect-status" id="detect-status"></div>
+    </div>
+
+    <div class="field">
+      <label>Image du plat (URL)</label>
+      <input type="text" id="f-img" placeholder="Détectée automatiquement ou coller une URL…" oninput="previewImg(this.value)">
+      <img id="img-preview" class="img-preview" alt="Aperçu">
+    </div>
+
+    <div class="field">
+      <label>Ingrédients & explications</label>
+      <textarea id="f-desc" placeholder="- 2 cuisses de poulet&#10;- Herbes de Provence&#10;&#10;Étapes :&#10;1. Préchauffer le four à 200°C…"></textarea>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeAdd()">Annuler</button>
+      <button class="btn-save" id="btn-save" onclick="saveRecipe()">Enregistrer ✓</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modale détail -->
+<div class="detail-overlay" id="detailOverlay">
+  <div class="detail-modal" id="detailModal"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SUPABASE_URL = 'https://gektptejixebknzxajms.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdla3RwdGVqaXhlYmtuenhham1zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0ODYzMjIsImV4cCI6MjA5NjA2MjMyMn0.3X7CkHc8faMYZlKKtf8SmiBTUJBtxRbu6qkZy1nCK8g';
+const API = `${SUPABASE_URL}/rest/v1/recettes`;
+const HEADERS = {
+  'apikey': SUPABASE_KEY,
+  'Authorization': `Bearer ${SUPABASE_KEY}`,
+  'Content-Type': 'application/json',
+  'Prefer': 'return=representation'
+};
+
+// Proxies gratuits pour récupérer les métadonnées Open Graph
+const OG_PROXIES = [
+  url => `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`,
+];
+
+let recipes = [];
+let editId = null;
+
+// ── Supabase CRUD ──────────────────────────────────────────────
+
+async function fetchRecipes() {
+  const r = await fetch(`${API}?order=created_at.desc`, { headers: HEADERS });
+  if (!r.ok) throw new Error('Erreur chargement');
+  return r.json();
+}
+
+async function insertRecipe(data) {
+  const r = await fetch(API, { method: 'POST', headers: HEADERS, body: JSON.stringify(data) });
+  if (!r.ok) throw new Error('Erreur sauvegarde');
+  return r.json();
+}
+
+async function updateRecipe(id, data) {
+  const r = await fetch(`${API}?id=eq.${id}`, { method: 'PATCH', headers: HEADERS, body: JSON.stringify(data) });
+  if (!r.ok) throw new Error('Erreur mise à jour');
+  return r.json();
+}
+
+async function deleteRecipe(id) {
+  const r = await fetch(`${API}?id=eq.${id}`, { method: 'DELETE', headers: HEADERS });
+  if (!r.ok) throw new Error('Erreur suppression');
+}
+
+// ── Détection image Open Graph ─────────────────────────────────
+
+async function detectImage() {
+  const url = document.getElementById('f-url').value.trim();
+  if (!url) return;
+
+  const btn = document.getElementById('btn-detect');
+  const status = document.getElementById('detect-status');
+  btn.disabled = true;
+  btn.textContent = '⏳ Recherche…';
+  status.textContent = 'Récupération des infos de la page…';
+  status.className = 'detect-status';
+
+  try {
+    // Essai via allorigins proxy
+    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+    const resp = await fetch(proxyUrl);
+    const data = await resp.json();
+    const html = data.contents || '';
+
+    // Extraire og:image
+    const ogMatch = html.match(/<meta[^>]*property=["']og:image["'][^>]*content=["']([^"']+)["']/i)
+                 || html.match(/<meta[^>]*content=["']([^"']+)["'][^>]*property=["']og:image["']/i);
+
+    // Extraire og:title si le nom est vide
+    const titleMatch = html.match(/<meta[^>]*property=["']og:title["'][^>]*content=["']([^"']+)["']/i)
+                    || html.match(/<meta[^>]*content=["']([^"']+)["'][^>]*property=["']og:title["']/i);
+
+    if (ogMatch && ogMatch[1]) {
+      const imgUrl = ogMatch[1];
+      document.getElementById('f-img').value = imgUrl;
+      previewImg(imgUrl);
+      status.textContent = '✓ Image trouvée !';
+      status.className = 'detect-status ok';
+
+      // Auto-remplir le nom si vide
+      if (!document.getElementById('f-name').value && titleMatch && titleMatch[1]) {
+        document.getElementById('f-name').value = titleMatch[1].substring(0, 80);
+      }
+    } else {
+      status.textContent = 'Image non détectée — colle une URL manuellement.';
+      status.className = 'detect-status err';
+    }
+  } catch (e) {
+    status.textContent = 'Impossible de détecter — colle une URL manuellement.';
+    status.className = 'detect-status err';
+  }
+
+  btn.textContent = '🔍 Image auto';
+  btn.disabled = false;
+}
+
+function onUrlInput() {
+  const val = document.getElementById('f-url').value.trim();
+  document.getElementById('btn-detect').disabled = !val;
+  document.getElementById('detect-status').textContent = '';
+}
+
+// ── UI ─────────────────────────────────────────────────────────
+
+function esc(s) {
+  return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function isFB(url) {
+  return url && (url.includes('facebook.com') || url.includes('fb.watch') || url.includes('fb.com'));
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2400);
+}
+
+function renderGrid() {
+  const q = (document.getElementById('search').value || '').toLowerCase();
+  const filtered = recipes.filter(r =>
+    r.nom.toLowerCase().includes(q) || (r.description || '').toLowerCase().includes(q)
+  );
+
+  const n = recipes.length;
+  document.getElementById('count').textContent = n === 0 ? '' : n === 1 ? '1 recette' : `${n} recettes`;
+
+  const grid = document.getElementById('grid');
+
+  if (filtered.length === 0) {
+    grid.innerHTML = `<div class="empty">
+      <div class="empty-icon">🍳</div>
+      <p style="font-size:15px;">${q ? 'Aucune recette ne correspond.' : 'Aucune recette pour l\'instant.<br>Ajoute ta première découverte !'}</p>
+      ${!q ? `<button class="btn-add" style="margin-top:1.5rem;" onclick="openAdd()">+ Ajouter une recette</button>` : ''}
+    </div>`;
+    return;
+  }
+
+  grid.innerHTML = filtered.map(r => {
+    const thumb = r.image_url
+      ? `<img class="card-thumb" src="${esc(r.image_url)}" alt="${esc(r.nom)}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+         <div class="card-thumb-placeholder" style="display:none;">🍽</div>`
+      : `<div class="card-thumb-placeholder">🍽</div>`;
+
+    const badge = r.url_video
+      ? `<span class="card-badge">${isFB(r.url_video) ? '📘 Vidéo FB' : '▶ Vidéo'}</span>`
+      : `<span class="card-badge">📝 Recette</span>`;
+
+    return `<div class="card" onclick="openDetail('${r.id}')">
+      ${thumb}
+      <div class="card-body">
+        <div class="card-title" title="${esc(r.nom)}">${esc(r.nom)}</div>
+        ${badge}
+      </div>
+      <div class="card-actions" onclick="event.stopPropagation()">
+        <button class="icon-btn" onclick="openEdit('${r.id}')" title="Modifier">✏️</button>
+        <button class="icon-btn del" onclick="confirmDelete('${r.id}', '${esc(r.nom)}')" title="Supprimer">🗑</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function loadRecipes() {
+  try {
+    recipes = await fetchRecipes();
+    renderGrid();
+  } catch (e) {
+    document.getElementById('grid').innerHTML = `<div class="empty"><p style="color:#A32D2D;">Erreur de connexion à la base de données.<br>Vérifie ta connexion internet.</p></div>`;
+  }
+}
+
+// ── Modale ajout/édition ───────────────────────────────────────
+
+function openAdd() {
+  editId = null;
+  document.getElementById('modal-title').textContent = 'Nouvelle recette';
+  document.getElementById('f-name').value = '';
+  document.getElementById('f-url').value = '';
+  document.getElementById('f-img').value = '';
+  document.getElementById('f-desc').value = '';
+  document.getElementById('img-preview').style.display = 'none';
+  document.getElementById('detect-status').textContent = '';
+  document.getElementById('btn-detect').disabled = true;
+  document.getElementById('addOverlay').classList.add('open');
+  setTimeout(() => document.getElementById('f-name').focus(), 80);
+}
+
+function openEdit(id) {
+  const r = recipes.find(x => x.id === id);
+  if (!r) return;
+  editId = id;
+  document.getElementById('modal-title').textContent = 'Modifier la recette';
+  document.getElementById('f-name').value = r.nom || '';
+  document.getElementById('f-url').value = r.url_video || '';
+  document.getElementById('f-img').value = r.image_url || '';
+  document.getElementById('f-desc').value = r.description || '';
+  document.getElementById('detect-status').textContent = '';
+  document.getElementById('btn-detect').disabled = !r.url_video;
+  previewImg(r.image_url);
+  document.getElementById('addOverlay').classList.add('open');
+}
+
+function closeAdd() { document.getElementById('addOverlay').classList.remove('open'); }
+
+function previewImg(url) {
+  const prev = document.getElementById('img-preview');
+  if (url) { prev.src = url; prev.style.display = 'block'; }
+  else { prev.style.display = 'none'; }
+}
+
+async function saveRecipe() {
+  const nom = document.getElementById('f-name').value.trim();
+  if (!nom) {
+    document.getElementById('f-name').style.borderColor = '#e06060';
+    document.getElementById('f-name').focus();
+    return;
+  }
+  document.getElementById('f-name').style.borderColor = '';
+
+  const btn = document.getElementById('btn-save');
+  btn.disabled = true;
+  btn.textContent = '⏳ Enregistrement…';
+
+  const payload = {
+    nom,
+    url_video: document.getElementById('f-url').value.trim() || null,
+    image_url: document.getElementById('f-img').value.trim() || null,
+    description: document.getElementById('f-desc').value.trim() || null,
+  };
+
+  try {
+    if (editId) {
+      await updateRecipe(editId, payload);
+      showToast('Recette mise à jour ✓');
+    } else {
+      await insertRecipe(payload);
+      showToast('Recette ajoutée ✓');
+    }
+    closeAdd();
+    await loadRecipes();
+  } catch (e) {
+    showToast('Erreur — réessaie');
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Enregistrer ✓';
+}
+
+async function confirmDelete(id, nom) {
+  if (!confirm(`Supprimer « ${nom} » ?`)) return;
+  try {
+    await deleteRecipe(id);
+    recipes = recipes.filter(r => r.id !== id);
+    renderGrid();
+    showToast('Recette supprimée');
+  } catch (e) {
+    showToast('Erreur suppression');
+  }
+}
+
+// ── Modale détail ──────────────────────────────────────────────
+
+function openDetail(id) {
+  const r = recipes.find(x => x.id === id);
+  if (!r) return;
+
+  const imgHtml = r.image_url
+    ? `<img class="detail-img" src="${esc(r.image_url)}" alt="${esc(r.nom)}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+       <div class="detail-no-img" style="display:none">🍽</div>`
+    : `<div class="detail-no-img">🍽</div>`;
+
+  const linkHtml = r.url_video
+    ? `<a href="${esc(r.url_video)}" target="_blank" class="detail-link-btn ${isFB(r.url_video) ? '' : 'generic'}">
+        ${isFB(r.url_video) ? '📘' : '▶'} Voir la vidéo
+       </a>`
+    : '';
+
+  const descHtml = r.description
+    ? `<div class="detail-desc">${esc(r.description)}</div>`
+    : `<p style="font-size:14px;color:#A8A49D;font-style:italic;">Aucune description.</p>`;
+
+  const date = r.created_at
+    ? new Date(r.created_at).toLocaleDateString('fr-FR', { day:'numeric', month:'long', year:'numeric' })
+    : '';
+
+  document.getElementById('detailModal').innerHTML = `
+    <button class="detail-close-btn" onclick="closeDetail()">✕</button>
+    ${imgHtml}
+    <div class="detail-body">
+      <h2 class="detail-name">${esc(r.nom)}</h2>
+      ${linkHtml}
+      ${descHtml}
+      ${date ? `<p style="font-size:11px;color:#C0BAB2;margin-top:1.5rem;">Ajouté le ${date}</p>` : ''}
+    </div>
+    <div class="detail-footer">
+      <button class="btn-cancel" onclick="closeDetail(); openEdit('${r.id}')">✏️ Modifier</button>
+      <button class="btn-cancel" onclick="closeDetail()">Fermer</button>
+    </div>`;
+
+  document.getElementById('detailOverlay').classList.add('open');
+}
+
+function closeDetail() { document.getElementById('detailOverlay').classList.remove('open'); }
+
+// Fermer en cliquant dehors
+document.getElementById('detailOverlay').addEventListener('click', e => { if (e.target === e.currentTarget) closeDetail(); });
+document.getElementById('addOverlay').addEventListener('click', e => { if (e.target === e.currentTarget) closeAdd(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeDetail(); closeAdd(); } });
+
+// Init
+loadRecipes();
+</script>
+</body>
+</html>
