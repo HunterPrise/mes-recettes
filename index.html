@@ -298,57 +298,77 @@ async function generateAiImage() {
   const btn = document.getElementById('btn-ai-thumb');
   btn.disabled = true;
   btn.textContent = '⏳ Recherche…';
-  setStatus('Recherche d\'une image pour ce plat…', 'loading');
+  setStatus('Recherche d\'une photo du plat…', 'loading');
 
-  // Mots clés nettoyés
-  const stopwords = ['aux', 'au', 'de', 'du', 'des', 'le', 'la', 'les', 'en', 'et', 'à', 'avec', 'sans', 'sur', 'une', 'un'];
-  const keywords = nom.toLowerCase().split(' ')
-    .filter(w => w.length > 2 && !stopwords.includes(w))
-    .slice(0, 3).join(' ');
+  // Mots clés : on enlève les mots français courants et on garde l'essentiel
+  const stopwords = ['aux', 'au', 'de', 'du', 'des', 'le', 'la', 'les', 'en', 'et', 'à', 'avec', 'sans', 'sur', 'une', 'un', 'ma', 'mon', 'mes', 'revisité', 'maison', 'facile', 'rapide'];
+  const words = nom.toLowerCase().split(/\s+/).filter(w => w.length > 2 && !stopwords.includes(w));
 
-  // Utiliser Pexels via leur CDN public (pas besoin de clé pour les recherches basiques)
-  // Fallback sur une image fixe Pexels selon catégorie détectée
-  const categories = {
-    'poulet': 'https://images.pexels.com/photos/2338407/pexels-photo-2338407.jpeg?w=400&h=300&fit=crop',
-    'boeuf': 'https://images.pexels.com/photos/1639557/pexels-photo-1639557.jpeg?w=400&h=300&fit=crop',
-    'poisson': 'https://images.pexels.com/photos/3655916/pexels-photo-3655916.jpeg?w=400&h=300&fit=crop',
-    'saumon': 'https://images.pexels.com/photos/3655916/pexels-photo-3655916.jpeg?w=400&h=300&fit=crop',
-    'pâtes': 'https://images.pexels.com/photos/1279330/pexels-photo-1279330.jpeg?w=400&h=300&fit=crop',
-    'pasta': 'https://images.pexels.com/photos/1279330/pexels-photo-1279330.jpeg?w=400&h=300&fit=crop',
-    'pizza': 'https://images.pexels.com/photos/825661/pexels-photo-825661.jpeg?w=400&h=300&fit=crop',
-    'salade': 'https://images.pexels.com/photos/1211887/pexels-photo-1211887.jpeg?w=400&h=300&fit=crop',
-    'taboulé': 'https://images.pexels.com/photos/1211887/pexels-photo-1211887.jpeg?w=400&h=300&fit=crop',
-    'soupe': 'https://images.pexels.com/photos/1547313/pexels-photo-1547313.jpeg?w=400&h=300&fit=crop',
-    'gâteau': 'https://images.pexels.com/photos/291528/pexels-photo-291528.jpeg?w=400&h=300&fit=crop',
-    'cake': 'https://images.pexels.com/photos/291528/pexels-photo-291528.jpeg?w=400&h=300&fit=crop',
-    'riz': 'https://images.pexels.com/photos/723198/pexels-photo-723198.jpeg?w=400&h=300&fit=crop',
-    'curry': 'https://images.pexels.com/photos/2474661/pexels-photo-2474661.jpeg?w=400&h=300&fit=crop',
-    'burger': 'https://images.pexels.com/photos/1639557/pexels-photo-1639557.jpeg?w=400&h=300&fit=crop',
-    'tarte': 'https://images.pexels.com/photos/291528/pexels-photo-291528.jpeg?w=400&h=300&fit=crop',
-    'omelette': 'https://images.pexels.com/photos/704569/pexels-photo-704569.jpeg?w=400&h=300&fit=crop',
-    'oeuf': 'https://images.pexels.com/photos/704569/pexels-photo-704569.jpeg?w=400&h=300&fit=crop',
+  // Traductions FR→EN pour TheMealDB
+  const translations = {
+    'poulet': 'chicken', 'boeuf': 'beef', 'bœuf': 'beef', 'agneau': 'lamb',
+    'porc': 'pork', 'saumon': 'salmon', 'thon': 'tuna', 'crevettes': 'shrimp',
+    'pâtes': 'pasta', 'riz': 'rice', 'pizza': 'pizza', 'burger': 'burger',
+    'salade': 'salad', 'soupe': 'soup', 'curry': 'curry', 'tajine': 'tajine',
+    'taboulé': 'tabbouleh', 'couscous': 'couscous', 'quiche': 'quiche',
+    'omelette': 'omelette', 'crêpes': 'crepes', 'gâteau': 'cake',
+    'tarte': 'pie', 'tiramisu': 'tiramisu', 'mousse': 'mousse',
+    'lasagne': 'lasagna', 'risotto': 'risotto', 'paella': 'paella',
+    'ratatouille': 'ratatouille', 'gratin': 'gratin', 'steak': 'steak',
+    'sushi': 'sushi', 'wok': 'stir fry', 'dame': 'salmon',
   };
 
-  const nomLower = nom.toLowerCase();
+  // Chercher d'abord avec traduction, ensuite mot par mot
   let imgUrl = null;
-  for (const [key, url] of Object.entries(categories)) {
-    if (nomLower.includes(key)) { imgUrl = url; break; }
+  const searchTerms = [];
+
+  for (const word of words) {
+    if (translations[word]) searchTerms.unshift(translations[word]);
+    else searchTerms.push(word);
+  }
+  // Ajouter aussi le nom complet en anglais si possible
+  searchTerms.push(nom);
+
+  for (const term of searchTerms) {
+    try {
+      const res = await fetch(`https://www.themealdb.com/api/json/v1/1/search.php?s=${encodeURIComponent(term)}`);
+      const data = await res.json();
+      if (data.meals && data.meals[0] && data.meals[0].strMealThumb) {
+        imgUrl = data.meals[0].strMealThumb;
+        break;
+      }
+    } catch(e) {}
   }
 
-  // Fallback générique si aucune catégorie trouvée
-  const generics = [
-    'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?w=400&h=300&fit=crop',
-    'https://images.pexels.com/photos/1099680/pexels-photo-1099680.jpeg?w=400&h=300&fit=crop',
-    'https://images.pexels.com/photos/2097090/pexels-photo-2097090.jpeg?w=400&h=300&fit=crop',
-    'https://images.pexels.com/photos/376464/pexels-photo-376464.jpeg?w=400&h=300&fit=crop',
-    'https://images.pexels.com/photos/1640774/pexels-photo-1640774.jpeg?w=400&h=300&fit=crop',
-  ];
+  // Si toujours rien, chercher par catégorie détectée
   if (!imgUrl) {
-    const seed = nom.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
-    imgUrl = generics[seed % generics.length];
+    const categoryMap = {
+      'chicken': 'Chicken', 'beef': 'Beef', 'lamb': 'Lamb', 'pasta': 'Pasta',
+      'seafood': 'Seafood', 'dessert': 'Dessert', 'vegetarian': 'Vegetarian',
+    };
+    const detectedCat = searchTerms.find(t => categoryMap[t.toLowerCase()]);
+    if (detectedCat) {
+      try {
+        const res = await fetch(`https://www.themealdb.com/api/json/v1/1/filter.php?c=${categoryMap[detectedCat.toLowerCase()]}`);
+        const data = await res.json();
+        if (data.meals && data.meals[0]) imgUrl = data.meals[0].strMealThumb;
+      } catch(e) {}
+    }
   }
 
-  setPreviewImage(imgUrl, '✨ Image trouvée automatiquement !', true);
+  // Fallback photos Pexels fixes si TheMealDB n'a rien
+  if (!imgUrl) {
+    const fallbacks = [
+      'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?w=400&h=300&fit=crop',
+      'https://images.pexels.com/photos/1099680/pexels-photo-1099680.jpeg?w=400&h=300&fit=crop',
+      'https://images.pexels.com/photos/2097090/pexels-photo-2097090.jpeg?w=400&h=300&fit=crop',
+      'https://images.pexels.com/photos/376464/pexels-photo-376464.jpeg?w=400&h=300&fit=crop',
+    ];
+    const seed = nom.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+    imgUrl = fallbacks[seed % fallbacks.length];
+  }
+
+  setPreviewImage(imgUrl, '✨ Photo trouvée !', true);
   btn.disabled = false;
   btn.textContent = '✨ Générer avec IA';
 }
