@@ -254,13 +254,7 @@ function detectPlatform(url) {
 }
 
 function getVideoLink(url) {
-  const platform = detectPlatform(url);
-  if (platform === 'facebook') {
-    // Extraire l'ID vidéo Facebook et ouvrir via facebook.com/watch
-    const match = url.match(/\/videos\/(\d+)/) || url.match(/v=(\d+)/) || url.match(/story_fbid=(\d+)/);
-    if (match) return `https://www.facebook.com/watch/?v=${match[1]}`;
-    return url;
-  }
+  // Retourner l'URL telle quelle — Facebook, Instagram, YouTube, Reels, tout marche
   return url;
 }
 
