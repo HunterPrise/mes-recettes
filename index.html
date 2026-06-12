@@ -166,7 +166,10 @@ main { max-width: 960px; margin: 0 auto; padding: 2rem 1.5rem; }
     </div>
     <div class="field">
       <label>Nom de la recette *</label>
-      <input type="text" id="f-name" placeholder="Ex : Poulet rôti aux herbes">
+      <input type="text" id="f-name" placeholder="Ex : Poulet rôti aux herbes" oninput="onNameInput()">
+      <div id="translation-wrap" style="display:none; margin-top:6px; padding:6px 10px; background:var(--accent-light); border-radius:6px; font-size:12px; color:var(--text-secondary);">
+        🔍 Recherche image avec : <strong id="translation-text" style="color:var(--accent);"></strong>
+      </div>
     </div>
     <div class="field">
       <label>Catégorie</label>
@@ -294,6 +297,71 @@ function tryYoutubThumb() {
   setPreviewImage(`https://img.youtube.com/vi/${id}/hqdefault.jpg`, '✓ Miniature YouTube');
 }
 
+// ── Traduction automatique FR→EN ──────────────────────────────
+const STOP = ['aux','au','de','du','des','le','la','les','en','et','une','un','sur','avec','sans','par','dans','pour','ma','mon','mes'];
+const TR = {
+  'poulet':'chicken','boeuf':'beef','saumon':'salmon','thon':'tuna','crevettes':'shrimp',
+  'pâtes':'pasta','riz':'rice','pizza':'pizza','salade':'salad','soupe':'soup',
+  'curry':'curry','gâteau':'cake','tarte':'pie','tiramisu':'tiramisu','mousse':'mousse',
+  'chocolat':'chocolate','fraises':'strawberry','citron':'lemon','vanille':'vanilla',
+  'caramel':'caramel','asperges':'asparagus','courgettes':'zucchini','poireaux':'leeks',
+  'artichaut':'artichoke','endive':'endive','pommes':'apple','poire':'pear',
+  'bolognese':'bolognese','nuggets':'nuggets','madeleines':'madeleines','crumble':'crumble',
+  'carpaccio':'carpaccio','taboulé':'tabbouleh','galettes':'galettes','sauce':'sauce',
+  'volaille':'chicken','lieu':'fish fillet','palourdes':'clams','pois':'peas',
+  'gaspacho':'gazpacho','hollandaise':'hollandaise','gougères':'cheese puffs',
+  'vinaigrette':'salad dressing','boulettes':'meatballs','nobu':'sashimi salmon',
+  'bresaola':'bresaola','bruschetta':'bruschetta','gnocchis':'gnocchi',
+  'feuilleté':'puff pastry','milanaise':'milanese','sarrasin':'buckwheat crepe',
+  'aubergine':'eggplant','tataki':'tataki','pickles':'pickled vegetables',
+  'oignons':'onions','marrons':'chestnuts','tortillas':'tortillas','far':'breton cake',
+  'lotte':'monkfish','dame':'fish steak','kashmir':'indian curry spices',
+  'carottes':'glazed carrots','cordon':'chicken cordon bleu','roulé':'roll',
+  'citrons':'lemon','givrés':'frozen sorbet','bonbon':'candied','vol':'vol au vent',
+  'tatin':'tarte tatin','mousse':'mousse','chausson':'turnover','biscuit':'ladyfinger',
+  'crème':'cream','gratin':'gratin','risotto':'risotto','paella':'paella',
+};
+
+let translationTimeout = null;
+let currentEnQuery = '';
+
+function translateName(nom) {
+  const words = nom.toLowerCase().split(/\s+/).filter(w => w.length > 2 && !STOP.includes(w));
+  const translated = words.map(w => TR[w] || w);
+  return translated.join(' ') + ' food dish';
+}
+
+async function translateWithApi(nom) {
+  try {
+    const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(nom)}&langpair=fr|en`);
+    const data = await res.json();
+    if (data.responseStatus === 200) return data.responseData.translatedText + ' food dish';
+  } catch(e) {}
+  return translateName(nom); // fallback dictionnaire
+}
+
+function onNameInput() {
+  const nom = document.getElementById('f-name').value.trim();
+  const wrap = document.getElementById('translation-wrap');
+  const txt = document.getElementById('translation-text');
+
+  if (!nom || nom.length < 3) { wrap.style.display = 'none'; currentEnQuery = ''; return; }
+
+  // Traduction instantanée via dictionnaire
+  const quick = translateName(nom);
+  currentEnQuery = quick;
+  txt.textContent = quick;
+  wrap.style.display = 'block';
+
+  // Traduction API après 800ms de pause
+  clearTimeout(translationTimeout);
+  translationTimeout = setTimeout(async () => {
+    const apiResult = await translateWithApi(nom);
+    currentEnQuery = apiResult;
+    txt.textContent = apiResult;
+  }, 800);
+}
+
 async function generateAiImage() {
   const nom = document.getElementById('f-name').value.trim();
   if (!nom) { setStatus('Remplis le nom de la recette', 'err'); document.getElementById('f-name').focus(); return; }
@@ -302,35 +370,16 @@ async function generateAiImage() {
   btn.disabled = true; btn.textContent = '⏳ Recherche…';
   setStatus('Recherche une photo…', 'loading');
 
-  const stopwords = ['aux','au','de','du','des','le','la','les','en','et','a','avec','sans','sur','une','un'];
-  const translations = {
-    'poulet':'chicken','boeuf':'beef','saumon':'salmon','thon':'tuna','crevettes':'shrimp',
-    'pâtes':'pasta','riz':'rice','pizza':'pizza','salade':'salad','soupe':'soup',
-    'curry':'curry','gâteau':'cake','tarte':'pie','tiramisu':'tiramisu','mousse':'mousse',
-    'chocolat':'chocolate','fraises':'strawberry','citron':'lemon','vanille':'vanilla',
-    'caramel':'caramel','asperges':'asparagus','courgettes':'zucchini','poireaux':'leeks',
-    'artichaut':'artichoke','endive':'endive','pommes':'apples','poire':'pear',
-    'bolognese':'bolognese','nuggets':'nuggets','madeleines':'madeleines','crumble':'crumble',
-    'carpaccio':'carpaccio','taboulé':'tabbouleh','galettes':'galettes','sauce':'sauce',
-    'volaille':'chicken','lieu':'fish','palourdes':'clams','pois':'peas','gaspacho':'gazpacho',
-    'hollandaise':'hollandaise','gougères':'gougeres','vinaigrette':'vinaigrette',
-    'boulettes':'meatballs','nobu':'salmon sashimi','bresaola':'bresaola',
-    'bruschetta':'bruschetta','gnocchis':'gnocchi','feuilleté':'puff pastry',
-    'milanaise':'milanese','sarrasin':'buckwheat','aubergine':'eggplant',
-    'tataki':'tataki','pickles':'pickles','oignons':'onions','marrons':'chestnuts',
-    'tortillas':'tortillas','vol':'vol au vent','far':'breton cake',
-  };
-
-  const words = nom.toLowerCase().split(/\s+/).filter(w => w.length > 2 && !stopwords.includes(w));
-  const translated = words.map(w => translations[w] || w).slice(0, 4);
-  const query = encodeURIComponent(translated.join(' ') + ' food dish');
+  // Utiliser la traduction déjà calculée ou la calculer maintenant
+  const query = currentEnQuery || translateName(nom);
+  const encodedQuery = encodeURIComponent(query);
 
   const prevIdx = parseInt(btn.dataset.imgIdx || '-1');
   const nextIdx = prevIdx + 1;
   const page = Math.floor(nextIdx / 10) + 1;
 
   try {
-    const res = await fetch(`https://api.unsplash.com/search/photos?query=${query}&per_page=10&page=${page}&orientation=landscape&client_id=${UNSPLASH_KEY}`);
+    const res = await fetch(`https://api.unsplash.com/search/photos?query=${encodedQuery}&per_page=10&page=${page}&orientation=landscape&client_id=${UNSPLASH_KEY}`);
     const data = await res.json();
     if (data.results && data.results.length > 0) {
       const imgs = data.results.map(r => r.urls.regular);
@@ -338,7 +387,18 @@ async function generateAiImage() {
       btn.dataset.imgIdx = nextIdx;
       setStatus(`✨ Photo ${nextIdx + 1} — reclique pour changer`, 'ok');
       setPreviewImage(imgs[idx], null, true);
-    } else { setStatus('Aucune photo — essaie un autre nom', 'err'); }
+    } else {
+      // Fallback TheMealDB
+      const mealRes = await fetch(`https://www.themealdb.com/api/json/v1/1/search.php?s=${encodeURIComponent(query.split(' ')[0])}`);
+      const mealData = await mealRes.json();
+      if (mealData.meals && mealData.meals[0]) {
+        btn.dataset.imgIdx = nextIdx;
+        setStatus(`✨ Photo ${nextIdx + 1} — reclique pour changer`, 'ok');
+        setPreviewImage(mealData.meals[0].strMealThumb, null, true);
+      } else {
+        setStatus('Aucune photo — essaie un autre nom', 'err');
+      }
+    }
   } catch(e) { setStatus('Erreur de recherche', 'err'); }
 
   btn.disabled = false; btn.textContent = '✨ Générer avec IA';
